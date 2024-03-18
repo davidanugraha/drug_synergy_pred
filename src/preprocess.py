@@ -1,21 +1,11 @@
 # Preprocess DataLoaders
-import copy
 import tdc
-from model_classes import *
 
 import torch
 import numpy as np
 import pandas as pd
-import time
-import pickle
-import argparse
-import rdkit
 from rdkit import Chem
-from rdkit.Chem import MACCSkeys
 
-import torch.nn as nn
-from torch.autograd import Variable
-import torch.optim as optim
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from torch_geometric.data import InMemoryDataset, DataLoader

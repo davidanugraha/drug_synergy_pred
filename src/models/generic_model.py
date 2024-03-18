@@ -73,10 +73,30 @@ class CellLineModel(torch.nn.Module):
         # Concatenated layer for MLP along with target cell; +1 is to introduce target cell again
         self.fc1 = nn.Linear(2220 + 1425 + 735 + len(TARGET_CLASSES), output_dim * 2)
         self.fc2 = nn.Linear(output_dim * 2 + len(TARGET_CLASSES), output_dim)
+        
+        # Initialize weights
+        self._initialize_weights()
 
         # Activation and regularization
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
+        
+    def _initialize_weights(self):
+        # Initialize convolution layers
+        for m in self.modules():
+            if isinstance(m, nn.Conv1d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm1d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+        # Initialize linear layers
+        nn.init.kaiming_normal_(self.fc1.weight, mode='fan_in', nonlinearity='relu')
+        nn.init.constant_(self.fc1.bias, 0)
+        nn.init.kaiming_normal_(self.fc2.weight, mode='fan_in', nonlinearity='relu')
+        nn.init.constant_(self.fc2.bias, 0)
         
     def forward(self, x):
         # Separate x into size 23808, 3171, 627, 10
@@ -150,3 +170,28 @@ class CellLineModel(torch.nn.Module):
         output = self.fc2(fc1_out)
         
         return output
+
+# EarlyStopping module
+class EarlyStopping:
+    def __init__(self, checkpoint_path, patience=5, delta=0, verbose=False):
+        self.patience = patience
+        self.delta = delta
+        self.verbose = verbose
+        self.counter = 0
+        self.early_stop = False
+        self.checkpoint = os.path.join(checkpoint_path, 'best_checkpoint.pt')
+        self.val_loss_min = torch.tensor(float('inf'))
+
+    def __call__(self, val_loss, model):
+        if val_loss < self.val_loss_min - self.delta:
+            if self.verbose:
+                print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model')
+            torch.save(model.state_dict(), self.checkpoint)
+            self.val_loss_min = val_loss
+            self.counter = 0
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                if self.verbose:
+                    print(f'EarlyStopping: No improvement in validation loss for {self.patience} epochs.')
+                self.early_stop = True
