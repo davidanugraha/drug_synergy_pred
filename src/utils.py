@@ -23,4 +23,9 @@ SRC_PATH = os.path.dirname(CUR_FILE_PATH)
 DATASET_DIR = os.path.join(os.path.dirname(SRC_PATH), 'datasets')
 if not os.path.exists(DATASET_DIR):
     os.makedirs(DATASET_DIR)
+    
+# Define the model checkpoint path
+CHECKPOINT_DIR = os.path.join(os.path.dirname(SRC_PATH), 'model_checkpoints')
+if not os.path.exists(CHECKPOINT_DIR):
+    os.makedirs(CHECKPOINT_DIR)
 

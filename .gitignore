@@ -1,0 +1,9 @@
+# Dataset
+datasets/
+data/
+
+# Models
+model_checkpoints/
+
+# Pycaches
+__pycache__/
