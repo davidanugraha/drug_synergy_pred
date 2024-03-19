@@ -7,3 +7,6 @@ model_checkpoints/
 
 # Pycaches
 __pycache__/
+
+# Out files
+*.out

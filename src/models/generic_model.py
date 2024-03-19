@@ -100,7 +100,10 @@ class CellLineModel(torch.nn.Module):
         
     def forward(self, x):
         # Separate x into size 23808, 3171, 627, 10
-        xg, xp, xm, xtc = x[:, :, :23808], x[:, :, 23808:26979], x[:, :, 26979:27606], x[:, :, 27606:]
+        xg = x[:, :23808].view(-1, 1, 23808)
+        xp = x[:, 23808:26979].view(-1, 1, 3171)
+        xm = x[:, 26979:27606].view(-1, 1, 627)
+        xtc = x[:, 27606:].view(-1, 1, len(TARGET_CLASSES))
         
         # Apply for gene features
         xg = self.conv_xg_1(xg)
@@ -185,13 +188,13 @@ class EarlyStopping:
     def __call__(self, val_loss, model):
         if val_loss < self.val_loss_min - self.delta:
             if self.verbose:
-                print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model')
+                logging.info(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model')
             torch.save(model.state_dict(), self.checkpoint)
             self.val_loss_min = val_loss
             self.counter = 0
         else:
             self.counter += 1
-            if self.counter >= self.patience:
+            if self.counter > self.patience:
                 if self.verbose:
-                    print(f'EarlyStopping: No improvement in validation loss for {self.patience} epochs.')
+                    logging.info(f'EarlyStopping: No improvement in validation loss for {self.patience} epochs.')
                 self.early_stop = True

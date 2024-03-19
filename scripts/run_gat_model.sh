@@ -1,7 +1,8 @@
 #!/bin/bash
 
+#SBATCH --partition=biggpunodes
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=32GB
+#SBATCH --mem=16GB
 #SBATCH --gres=gpu:1
 #SBATCH -t 24:00:00
 
