@@ -47,16 +47,15 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
         self.verbose = verbose
         self.optimizer = torch.optim.Adam(self.parameters(), betas=(0.9, 0.98), lr=lr, weight_decay=weight_decay)
         self.num_epochs = num_epochs
-        self.early_stopping = EarlyStopping(checkpoint_path=os.path.join(CHECKPOINT_DIR, 'best_gat'),
+        checkpoint_path = os.path.join(CHECKPOINT_DIR, 'best_gat')
+        if not os.path.exists(checkpoint_path):
+            os.makedirs(checkpoint_path)
+        self.early_stopping = EarlyStopping(checkpoint_path=checkpoint_path,
                                             patience=patience, delta=delta, verbose=self.verbose)
         self.criterion = nn.MSELoss()
         
     def _initialize_weights(self):
         # Initialize weights using He Initialization or Xavier, depending on the layer
-        init.kaiming_normal_(self.gcn1_d1.weight, mode='fan_in', nonlinearity='leaky_relu')
-        init.kaiming_normal_(self.gcn2_d1.weight, mode='fan_in', nonlinearity='leaky_relu')
-        init.kaiming_normal_(self.gcn1_d2.weight, mode='fan_in', nonlinearity='leaky_relu')
-        init.kaiming_normal_(self.gcn2_d2.weight, mode='fan_in', nonlinearity='leaky_relu')
         init.kaiming_normal_(self.fc1.weight, mode='fan_in', nonlinearity='relu')
         init.kaiming_normal_(self.fc2.weight, mode='fan_in', nonlinearity='relu')
         init.xavier_normal_(self.out.weight)
@@ -74,38 +73,31 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
     def forward(self, data):
         # Feed graph network for Drug 1
         xd1, edge_index1, batch_d1 = data.xd1, data.edge_index1, data.batch_d1
-        batch_d1, batch_size = self._reset_batch_indices(batch_d1)
         xd1 = F.dropout(xd1, p=self.dropout_gcn, training=self.training)
         xd1 = F.elu(self.gcn1_d1(xd1, edge_index1))
         xd1 = F.dropout(xd1, p=self.dropout_gcn, training=self.training)
         xd1 = self.gcn2_d1(xd1, edge_index1)
         xd1 = self.relu(xd1)
-        xd1 = gmp(xd1, batch_d1, size=batch_size)
+        xd1 = gmp(xd1, batch_d1)
         xd1 = self.fc_g1_d1(xd1)
         xd1 = self.relu(xd1)
         
         # Feed graph network for Drug 2
         xd2, edge_index2, batch_d2 = data.xd2, data.edge_index2, data.batch_d2
-        batch_d2, batch_size = self._reset_batch_indices(batch_d2)
         xd2 = F.dropout(xd2, p=self.dropout_gcn, training=self.training)
         xd2 = F.elu(self.gcn1_d2(xd2, edge_index2))
         xd2 = F.dropout(xd2, p=self.dropout_gcn, training=self.training)
         xd2 = self.gcn2_d2(xd2, edge_index2)
         xd2 = self.relu(xd2)
-        xd2 = gmp(xd2, batch_d2, size=batch_size)
+        xd2 = gmp(xd2, batch_d2)
         xd2 = self.fc_g1_d2(xd2)
         xd2 = self.relu(xd2)
 
         # Cell line features and cell line target; Reshape them first as it's collated
         xc1, xc2, xc3, xtc = data.xc1, data.xc2, data.xc3, data.xtc
-        xc1 = xc1.view(-1, 1, 23808)
-        xc2 = xc2.view(-1, 1, 3171)
-        xc3 = xc3.view(-1, 1, 627)
-        xtc = xtc.view(-1, 1, len(TARGET_CLASSES))
-        xcl = self.cell_line_model(torch.cat((xc1, xc2, xc3, xtc), dim=2))
+        xcl = self.cell_line_model(torch.cat((xc1, xc2, xc3, xtc), dim=1))
         
         # Concat processed cell line and drug features; proceed with FCN
-        xtc = xtc.view(-1, len(TARGET_CLASSES))
         xc = torch.cat((xd1, xd2, xcl, xtc), dim=1)
         xc = self.fc1(xc)
         xc = self.relu(xc)
@@ -134,10 +126,11 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
             running_loss = 0.0
 
             for batch_idx, data in enumerate(train_loader):
-                inputs, targets = data.to(DEVICE)
+                data = data.to(DEVICE)
+                targets = data.labels
 
                 self.optimizer.zero_grad()
-                outputs = self(inputs)
+                outputs = self(data)
                 loss = self.criterion(outputs, targets)
                 loss.backward()
                 self.optimizer.step()
@@ -153,8 +146,9 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
             val_loss = 0.0
             with torch.no_grad():
                 for data in val_loader:
-                    inputs, targets = data.to(DEVICE)
-                    outputs = self(inputs)
+                    data = data.to(DEVICE)
+                    targets = data.labels
+                    outputs = self(data)
                     val_loss += self.criterion(outputs, targets).item()
 
             val_loss /= len(val_loader)
@@ -172,11 +166,11 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
 
         logging.debug(f'Finished training with best validation loss: {best_val_loss}')
 
-    def perform_prediction(self, X_test):
+    def perform_prediction(self, test_loader):
         self.eval()
         total_preds = torch.Tensor()
         with torch.no_grad():
-            for data in X_test:
+            for data in test_loader:
                 data = data.to(DEVICE)
                 output = self(data)
                 total_preds = torch.cat((total_preds, output.cpu()), 0)

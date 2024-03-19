@@ -100,7 +100,10 @@ class CellLineModel(torch.nn.Module):
         
     def forward(self, x):
         # Separate x into size 23808, 3171, 627, 10
-        xg, xp, xm, xtc = x[:, :, :23808], x[:, :, 23808:26979], x[:, :, 26979:27606], x[:, :, 27606:]
+        xg = x[:, :23808].view(-1, 1, 23808)
+        xp = x[:, 23808:26979].view(-1, 1, 3171)
+        xm = x[:, 26979:27606].view(-1, 1, 627)
+        xtc = x[:, 27606:].view(-1, 1, len(TARGET_CLASSES))
         
         # Apply for gene features
         xg = self.conv_xg_1(xg)

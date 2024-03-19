@@ -6,9 +6,8 @@ import numpy as np
 import pandas as pd
 from rdkit import Chem
 
-from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
-from torch_geometric.data import InMemoryDataset, DataLoader
+from torch.utils.data import Dataset, DataLoader
 from torch_geometric import data as DATA
 
 from .utils import *
@@ -22,15 +21,38 @@ IMPLICIT_VALENCE_LIST = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 BENCHMARK_GROUP = tdc.BenchmarkGroup('drugcombo_group', path=DATASET_DIR, file_format='pkl')
 BENCHMARK_NAME = 'drugcomb_css'
 
-class CustomGraphData(DATA.Data): 
-    def __inc__(self, key, value, *args, **kwargs):
-        if key == 'edge_index1':
-            return self.xd1.size(0)
-        if key == 'edge_index2':
-            return self.xd2.size(0)
-        return super().__inc__(key, value, *args, **kwargs)
+class BatchCustomGraphData:
+    def __init__(self, xd1, edge_index1, xd2, edge_index2, batch_d1, batch_d2, xc1, xc2, xc3, xtc, labels, smile_graph, saliency_map=False):
+        self.xd1 = xd1
+        self.edge_index1 = edge_index1
+        self.xd2 = xd2
+        self.edge_index2 = edge_index2
+        self.batch_d1 = batch_d1
+        self.batch_d2 = batch_d2
+        self.xc1 = xc1
+        self.xc2 = xc2
+        self.xc3 = xc3
+        self.xtc = xtc
+        self.labels = labels
+        self.smile_graph = smile_graph
+        self.saliency_map = saliency_map
+        
+    def to(self, device):
+        self.xd1 = self.xd1.to(device)
+        self.edge_index1 = self.edge_index1.to(device)
+        self.xd2 = self.xd2.to(device)
+        self.edge_index2 = self.edge_index2.to(device)
+        self.batch_d1 = self.batch_d1.to(device)
+        self.batch_d2 = self.batch_d2.to(device)
+        self.xc1 = self.xc1.to(device)
+        self.xc2 = self.xc2.to(device)
+        self.xc3 = self.xc3.to(device)
+        self.xtc = self.xtc.to(device)
+        self.labels = self.labels.to(device)
 
-class DrugCSSDataset(InMemoryDataset):
+        return self
+
+class DrugCSSDataset(Dataset):
     def __init__(self, xd1, xd2, xc1, xc2, xc3, xtc, y, smile_graph, saliency_map=False):
         self.xd1 = xd1
         self.xd2 = xd2
@@ -41,49 +63,30 @@ class DrugCSSDataset(InMemoryDataset):
         self.y = y
         self.smile_graph = smile_graph
         self.saliency_map = saliency_map
-        super(DrugCSSDataset, self).__init__(root=DATASET_DIR, transform=None, pre_transform=None, pre_filter=None)
-        self.process()
-        self.data, self.slices = torch.load(self.processed_paths[0])
 
-    @property
-    def raw_file_names(self):
-        return []
+    def __len__(self):
+        return len(self.xd1)
 
-    @property
-    def processed_file_names(self):
-        return ['processed_data.pt']
+    def __getitem__(self, idx):
+        features1, edge_index1 = self.smile_graph[self.xd1[idx]]
+        features2, edge_index2 = self.smile_graph[self.xd2[idx]]
 
-    def download(self):
-        pass
+        # Create Data object for both Drug 1 and Drug 2
+        data = DATA.Data(
+            xd1=torch.tensor(features1, dtype=torch.float),
+            edge_index1=torch.tensor(edge_index1, dtype=torch.long).t().contiguous(),
+            xd2=torch.tensor(features2, dtype=torch.float),
+            edge_index2=torch.tensor(edge_index2, dtype=torch.long).t().contiguous(),
+            xc1=torch.tensor(self.xc1[idx], dtype=torch.float),
+            xc2=torch.tensor(self.xc2[idx], dtype=torch.float),
+            xc3=torch.tensor(self.xc3[idx], dtype=torch.float),
+            xtc=torch.tensor(self.xtc[idx], dtype=torch.float),
+            labels=torch.tensor(self.y[idx], dtype=torch.float),
+            smile_graph=self.smile_graph,
+            saliency_map=self.saliency_map
+        )
 
-    def process(self):
-        data_list = []
-        for i in range(len(self.xd1)):
-            # print('Converting SMILES to graph: {}/{}'.format(i + 1, len(self.xd1)))
-            features1, edge_index1 = self.smile_graph[self.xd1[i]]
-            features2, edge_index2 = self.smile_graph[self.xd2[i]]
-            
-            # Create Data object for both Drug 1 and Drug 2
-            data = CustomGraphData(
-                xd1=torch.tensor(features1, dtype=torch.float),
-                edge_index1=torch.tensor(edge_index1, dtype=torch.long).t().contiguous(),
-                xd2=torch.tensor(features2, dtype=torch.float),
-                edge_index2=torch.tensor(edge_index2, dtype=torch.long).t().contiguous(),
-                xc1=torch.tensor(self.xc1[i], dtype=torch.float),
-                xc2=torch.tensor(self.xc2[i], dtype=torch.float),
-                xc3=torch.tensor(self.xc3[i], dtype=torch.float),
-                xtc=torch.tensor(self.xtc[i], dtype=torch.float),
-                batch_d1=torch.tensor([i] * len(features1), dtype=torch.long),
-                batch_d2=torch.tensor([i] * len(features2), dtype=torch.long),
-                labels=torch.tensor(self.y[i], dtype=torch.float),
-                smile_graph=self.smile_graph,
-                saliency_map=self.saliency_map
-            )
-            
-            data_list.append(data)
-
-        data, slices = self.collate(data_list)
-        torch.save((data, slices), self.processed_paths[0])
+        return data
 
 def one_hot_encoding(x, l):
     # If x is not in the list, use the last element
@@ -187,21 +190,48 @@ def prepare_dataframe(val_split):
     val_df = val_df.reset_index(drop=True)
     test_df = test_df.reset_index(drop=True)
     return train_df, val_df, test_df, smile_to_graph_dict
+
+def custom_collate(batch):
+    # Stack the input tensors along the batch dimension
+    xd1 = torch.vstack([data.xd1 for data in batch])
+    edge_index1 = torch.hstack([data.edge_index1 for data in batch])
+    xd2 = torch.vstack([data.xd2 for data in batch])
+    edge_index2 = torch.hstack([data.edge_index2 for data in batch])
+    xc1 = torch.vstack([data.xc1 for data in batch])
+    xc2 = torch.vstack([data.xc2 for data in batch])
+    xc3 = torch.vstack([data.xc3 for data in batch])
+    xtc = torch.vstack([data.xtc for data in batch])
+    labels = torch.vstack([data.labels for data in batch])
+    smile_graph = [data.smile_graph for data in batch]
+    saliency_map = [data.saliency_map for data in batch]
     
+    # Compute batch_d1 and batch_d2
+    batch_d1 = []
+    batch_d2 = []
+    for i, data in enumerate(batch):
+        batch_d1.extend([i] * data.xd1.size(0))
+        batch_d2.extend([i] * data.xd2.size(0))
+    batch_d1 = torch.tensor(batch_d1, dtype=torch.long)
+    batch_d2 = torch.tensor(batch_d2, dtype=torch.long)
+
+    return BatchCustomGraphData(xd1=xd1, edge_index1=edge_index1, xd2=xd2, edge_index2=edge_index2,
+                                batch_d1=batch_d1, batch_d2=batch_d2, xc1=xc1, xc2=xc2, xc3=xc3,
+                                xtc=xtc, labels=labels, smile_graph=smile_graph, saliency_map=saliency_map)
+
 def get_data_loaders(val_split=0.2, batch_size=32):
     # Prepare dataframe
     train_df, val_df, test_df, smile_to_graph_dict = prepare_dataframe(val_split)
 
     xd1, xd2, xc1, xc2, xc3, xtc, y = extract_attributes_from_df(train_df)
     train_dataset = DrugCSSDataset(xd1=xd1, xd2=xd2, xc1=xc1, xc2=xc2, xc3=xc3, xtc=xtc, y=y, smile_graph=smile_to_graph_dict)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
     xd1, xd2, xc1, xc2, xc3, xtc, y = extract_attributes_from_df(val_df)
     val_dataset = DrugCSSDataset(xd1=xd1, xd2=xd2, xc1=xc1, xc2=xc2, xc3=xc3, xtc=xtc, y=y, smile_graph=smile_to_graph_dict)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
     xd1, xd2, xc1, xc2, xc3, xtc, y = extract_attributes_from_df(test_df)
     test_dataset = DrugCSSDataset(xd1=xd1, xd2=xd2, xc1=xc1, xc2=xc2, xc3=xc3, xtc=xtc, y=y, smile_graph=smile_to_graph_dict)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
     return train_loader, val_loader, test_loader
