@@ -188,7 +188,7 @@ class EarlyStopping:
     def __call__(self, val_loss, model):
         if val_loss < self.val_loss_min - self.delta:
             if self.verbose:
-                print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model')
+                logging.info(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}). Saving model')
             torch.save(model.state_dict(), self.checkpoint)
             self.val_loss_min = val_loss
             self.counter = 0
@@ -196,5 +196,5 @@ class EarlyStopping:
             self.counter += 1
             if self.counter >= self.patience:
                 if self.verbose:
-                    print(f'EarlyStopping: No improvement in validation loss for {self.patience} epochs.')
+                    logging.info(f'EarlyStopping: No improvement in validation loss for {self.patience} epochs.')
                 self.early_stop = True

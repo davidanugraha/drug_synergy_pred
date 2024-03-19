@@ -1,5 +1,5 @@
 # Preprocess DataLoaders
-import tdc
+from tdc.benchmark_group import drugcombo_group
 
 import torch
 import numpy as np
@@ -18,8 +18,9 @@ DEGREE_LIST = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 NUMBER_OF_H_LIST = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 IMPLICIT_VALENCE_LIST = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-BENCHMARK_GROUP = tdc.BenchmarkGroup('drugcombo_group', path=DATASET_DIR, file_format='pkl')
-BENCHMARK_NAME = 'drugcomb_css'
+BENCHMARK_GROUP = drugcombo_group(path=DATASET_DIR)
+BENCHMARK = BENCHMARK_GROUP.get('Drugcomb_CSS')
+BENCHMARK_NAME = BENCHMARK['name']
 
 class BatchCustomGraphData:
     def __init__(self, xd1, edge_index1, xd2, edge_index2, batch_d1, batch_d2, xc1, xc2, xc3, xtc, labels, smile_graph, saliency_map=False):
@@ -149,7 +150,7 @@ def add_graph(data, smile_to_graph_dict):
 
 def prepare_dataframe(val_split):
     # Gather data from TDC Benchmark
-    train_val_df, test_df = BENCHMARK_GROUP.get(BENCHMARK_NAME)['train_val'], BENCHMARK_GROUP.get(BENCHMARK_NAME)['test']
+    train_val_df, test_df = BENCHMARK['train_val'], BENCHMARK['test']
     
     # Unpack CellLine arrays into 3 distinct arrays
     train_val_df[['CellLine1', 'CellLine2', 'CellLine3']] = train_val_df['CellLine'].apply(lambda x: pd.Series([x[0], x[1], x[2]]))
@@ -235,3 +236,7 @@ def get_data_loaders(val_split=0.2, batch_size=32):
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
     return train_loader, val_loader, test_loader
+
+# def evaluate_benchmark(predictions):
+#     out = BENCHMARK_GROUP.evaluate(predictions)
+#     logging.info(out)
