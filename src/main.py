@@ -4,6 +4,7 @@ import json
 from .utils import *
 from .preprocess import get_data_loaders
 from .models.gat import GATNet
+from .models.gat_gcn import GATGCNNet
 
 def main(model_config_path):
     # Read json for training
@@ -20,6 +21,8 @@ def main(model_config_path):
     model_name = model_config['model_name']
     if model_name == 'gat':
         model = GATNet(**model_config)
+    elif model_name == 'gat_gcn':
+        model = GATGCNNet(**model_config)
     else:
         raise NotImplementedError("Model not recognized")
     
