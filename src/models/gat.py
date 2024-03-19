@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.nn import Sequential, Linear, ReLU
 from torch_geometric.nn import GATConv
 from torch_geometric.nn import global_max_pool as gmp
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from .generic_model import GenericModelPipeline, CellLineModel, EarlyStopping
 
@@ -53,6 +54,7 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
         self.early_stopping = EarlyStopping(checkpoint_path=checkpoint_path,
                                             patience=patience, delta=delta, verbose=self.verbose)
         self.criterion = nn.MSELoss()
+        self.scheduler = CosineAnnealingLR(self.optimizer, T_max=self.num_epochs)
         
     def _initialize_weights(self):
         # Initialize weights using He Initialization or Xavier, depending on the layer
@@ -112,9 +114,9 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
         out = torch.clamp(out, min=-100, max=100)
 
         return out
-        
+    
+    # Run whole training procedure
     def run_train(self, train_loader, val_loader, **kwargs):
-        # TODO: Implement based on given
         self.to(DEVICE)
 
         train_losses = []
@@ -140,6 +142,8 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
             # Calculate average training loss for the epoch
             epoch_loss = running_loss / len(train_loader)
             train_losses.append(epoch_loss)
+            
+            self.scheduler.step()
 
             # Validate the model
             self.eval()
