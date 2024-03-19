@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
 from torch.nn import Sequential, Linear, ReLU
-from torch_geometric.nn import GATConv
+from torch_geometric.nn import GATConv, GCNConv
 from torch_geometric.nn import global_max_pool as gmp, global_mean_pool as gap
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
@@ -13,24 +13,24 @@ from .generic_model import GenericModelPipeline, CellLineModel, EarlyStopping
 
 from ..utils import *
 
-class GATNet(torch.nn.Module, GenericModelPipeline):
-    def __init__(self, num_features_xd=77, n_output=1, num_heads=10, gat_linear_features=1500,
+class GATGCNNet(torch.nn.Module, GenericModelPipeline):
+    def __init__(self, num_features_xd=77, n_output=1, num_heads=10, gcn_linear_features=1500,
                  xd_output_dim=128, xcl_output_dim=256,
                  dropout_gcn=0.2, dropout_att=0.1, dropout_mlp=0.1,
                  lr=1e-3, num_epochs=1000, weight_decay=0.01,
                  patience=5, delta=0, verbose=False, **kwargs):
-        super(GATNet, self).__init__()
+        super(GATGCNNet, self).__init__()
 
         # Graph layers (both drugs use same architecture)
         self.gat1_d1 = GATConv(num_features_xd, num_features_xd, heads=num_heads, dropout=dropout_att)
-        self.gat2_d1 = GATConv(num_features_xd * num_heads, xd_output_dim, dropout=dropout_att)
-        self.fc_g1_d1 = nn.Linear(2 * xd_output_dim, gat_linear_features)
-        self.fc_g2_d1 = nn.Linear(gat_linear_features, xd_output_dim)
+        self.gcn1_d1 = GCNConv(num_features_xd * num_heads, num_features_xd * num_heads)
+        self.fc_g1_d1 = nn.Linear(num_features_xd * num_heads * 2, gcn_linear_features)
+        self.fc_g2_d1 = nn.Linear(gcn_linear_features, xd_output_dim)
         
         self.gat1_d2 = GATConv(num_features_xd, num_features_xd, heads=num_heads, dropout=dropout_att)
-        self.gat2_d2 = GATConv(num_features_xd * num_heads, xd_output_dim, dropout=dropout_att)
-        self.fc_g1_d2 = nn.Linear(2 * xd_output_dim, gat_linear_features)
-        self.fc_g2_d2 = nn.Linear(gat_linear_features, xd_output_dim)
+        self.gcn1_d2 = GCNConv(num_features_xd * num_heads, num_features_xd * num_heads)
+        self.fc_g1_d2 = nn.Linear(num_features_xd * num_heads * 2, gcn_linear_features)
+        self.fc_g2_d2 = nn.Linear(gcn_linear_features, xd_output_dim)
 
         # Cell line features
         self.cell_line_model = CellLineModel(output_dim=xcl_output_dim, dropout=dropout_mlp)
@@ -52,7 +52,7 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
         self.verbose = verbose
         self.optimizer = torch.optim.Adam(self.parameters(), betas=(0.9, 0.98), lr=lr, weight_decay=weight_decay)
         self.num_epochs = num_epochs
-        checkpoint_path = os.path.join(CHECKPOINT_DIR, 'best_gat5')
+        checkpoint_path = os.path.join(CHECKPOINT_DIR, 'best_gat_gcn2')
         if not os.path.exists(checkpoint_path):
             os.makedirs(checkpoint_path)
         self.early_stopping = EarlyStopping(checkpoint_path=checkpoint_path,
@@ -82,7 +82,7 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
         xd1 = F.dropout(xd1, p=self.dropout_gcn, training=self.training)
         xd1 = F.elu(self.gat1_d1(xd1, edge_index1))
         xd1 = F.dropout(xd1, p=self.dropout_gcn, training=self.training)
-        xd1 = self.gat2_d1(xd1, edge_index1)
+        xd1 = self.gcn1_d1(xd1, edge_index1)
         xd1 = self.relu(xd1)
         xd1 = torch.cat((gmp(xd1, batch_d1), gap(xd1, batch_d1)), dim=1)
         xd1 = self.fc_g1_d1(xd1)
@@ -96,7 +96,7 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
         xd2 = F.dropout(xd2, p=self.dropout_gcn, training=self.training)
         xd2 = F.elu(self.gat1_d2(xd2, edge_index2))
         xd2 = F.dropout(xd2, p=self.dropout_gcn, training=self.training)
-        xd2 = self.gat2_d2(xd2, edge_index2)
+        xd2 = self.gcn1_d2(xd2, edge_index2)
         xd2 = self.relu(xd2)
         xd2 = torch.cat((gmp(xd2, batch_d2), gap(xd2, batch_d2)), dim=1)
         xd2 = self.fc_g1_d2(xd2)
