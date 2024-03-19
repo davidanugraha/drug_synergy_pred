@@ -194,7 +194,7 @@ class EarlyStopping:
             self.counter = 0
         else:
             self.counter += 1
-            if self.counter >= self.patience:
+            if self.counter > self.patience:
                 if self.verbose:
                     logging.info(f'EarlyStopping: No improvement in validation loss for {self.patience} epochs.')
                 self.early_stop = True

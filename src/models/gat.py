@@ -7,6 +7,8 @@ from torch_geometric.nn import GATConv
 from torch_geometric.nn import global_max_pool as gmp
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
 from .generic_model import GenericModelPipeline, CellLineModel, EarlyStopping
 
 from ..utils import *
@@ -173,9 +175,18 @@ class GATNet(torch.nn.Module, GenericModelPipeline):
     def perform_prediction(self, test_loader):
         self.eval()
         total_preds = torch.Tensor()
+        total_labels = torch.Tensor()
         with torch.no_grad():
             for data in test_loader:
                 data = data.to(DEVICE)
                 output = self(data)
                 total_preds = torch.cat((total_preds, output.cpu()), 0)
+                total_labels = torch.cat((total_labels, data.labels.cpu()), 0)
+                    
+        # Evaluate model prediction
+        mae_prediction = mean_absolute_error(total_preds.numpy().flatten(), total_labels.numpy().flatten())
+        mse_prediction = mean_squared_error(total_preds.numpy().flatten(), total_labels.numpy().flatten())
+        logging.info(f"Mean Absolute Error is: {mae_prediction}")
+        logging.info(f"Mean Squared Error is: {mse_prediction}")
+
         return total_preds.numpy().flatten()
