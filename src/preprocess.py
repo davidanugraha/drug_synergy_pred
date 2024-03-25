@@ -13,11 +13,15 @@ from rdkit.Chem import Descriptors
 from mordred import Calculator, descriptors
 from .utils import *
 
+rdkit_features =  ['MaxEStateIndex', 'MinEStateIndex', 'MaxAbsEStateIndex', 'MinAbsEStateIndex', 'qed', 'MolWt', 'HeavyAtomMolWt', 'ExactMolWt', 'NumValenceElectrons', 'NumRadicalElectrons', 'FpDensityMorgan1', 'FpDensityMorgan2', 'FpDensityMorgan3', 'Chi0', 'Chi0n', 'Chi0v', 'Chi1', 'Chi1n', 'Chi1v', 'Chi2n', 'Chi2v', 'Chi3n', 'Chi3v', 'Chi4n', 'Chi4v', 'HallKierAlpha', 'Kappa1', 'Kappa2', 'PEOE_VSA14', 'SMR_VSA10', 'SlogP_VSA12', 'EState_VSA11', 'VSA_EState10', 'HeavyAtomCount', 'NHOHCount', 'NOCount', 'NumAliphaticCarbocycles', 'NumAliphaticHeterocycles', 'NumAliphaticRings', 'NumAromaticCarbocycles', 'NumAromaticHeterocycles', 'NumAromaticRings', 'NumSaturatedCarbocycles', 'NumSaturatedHeterocycles', 'NumSaturatedRings', 'fr_Al_COO', 'fr_Al_OH', 'fr_Al_OH_noTert', 'fr_ArN', 'fr_Ar_COO', 'fr_Ar_N', 'fr_Ar_OH', 'fr_COO', 'fr_COO2', 'fr_C_O', 'fr_C_O_noCOO', 'fr_C_S', 'fr_HOCCN', 'fr_Imine', 'fr_NH0', 'fr_NH1', 'fr_NH2', 'fr_N_O', 'fr_Ndealkylation1', 'fr_Ndealkylation2', 'fr_SH', 'fr_aldehyde', 'fr_alkyl_carbamate', 'fr_alkyl_halide', 'fr_allylic_oxid', 'fr_amide', 'fr_amidine', 'fr_aniline', 'fr_aryl_methyl', 'fr_azide', 'fr_azo', 'fr_barbitur', 'fr_benzene', 'fr_benzodiazepine', 'fr_bicyclic', 'fr_diazo', 'fr_dihydropyridine', 'fr_epoxide', 'fr_ester', 'fr_ether', 'fr_furan', 'fr_guanido', 'fr_hdrzine', 'fr_hdrzone', 'fr_imidazole', 'fr_imide', 'fr_isocyan', 'fr_isothiocyan', 'fr_ketone', 'fr_ketone_Topliss', 'fr_lactam', 'fr_lactone', 'fr_methoxy', 'fr_morpholine', 'fr_nitrile', 'fr_nitro', 'fr_nitro_arom', 'fr_nitro_arom_nonortho', 'fr_nitroso', 'fr_oxazole', 'fr_oxime', 'fr_para_hydroxylation', 'fr_phenol', 'fr_phenol_noOrthoHbond', 'fr_phos_acid', 'fr_phos_ester', 'fr_piperdine', 'fr_piperzine', 'fr_priamide', 'fr_prisulfonamd', 'fr_pyridine', 'fr_quatN', 'fr_sulfide', 'fr_sulfonamd', 'fr_sulfone', 'fr_term_acetylene', 'fr_tetrazole', 'fr_thiazole', 'fr_thiocyan', 'fr_thiophene', 'fr_unbrch_alkane', 'fr_urea', 'BalabanJ', 'BertzCT', 'LabuteASA', 'PEOE_VSA1', 'PEOE_VSA2', 'PEOE_VSA3', 'PEOE_VSA4', 'PEOE_VSA5', 'PEOE_VSA6', 'PEOE_VSA7', 'PEOE_VSA8', 'PEOE_VSA9', 'PEOE_VSA10', 'PEOE_VSA11', 'PEOE_VSA12', 'PEOE_VSA13', 'SMR_VSA1', 'SMR_VSA2', 'SMR_VSA3', 'SMR_VSA4', 'SMR_VSA5', 'SMR_VSA6', 'SMR_VSA7', 'SMR_VSA8', 'SMR_VSA9', 'SlogP_VSA1', 'SlogP_VSA2', 'SlogP_VSA3', 'SlogP_VSA4', 'SlogP_VSA5', 'SlogP_VSA6', 'SlogP_VSA7', 'SlogP_VSA8', 'SlogP_VSA9', 'SlogP_VSA10', 'SlogP_VSA11', 'EState_VSA1', 'EState_VSA2', 'EState_VSA3', 'EState_VSA4', 'EState_VSA5', 'EState_VSA6', 'EState_VSA7', 'EState_VSA8', 'EState_VSA9', 'EState_VSA10', 'VSA_EState1', 'VSA_EState2', 'VSA_EState3', 'VSA_EState4', 'VSA_EState5', 'VSA_EState6', 'VSA_EState7', 'VSA_EState8', 'VSA_EState9']
 ELEMENT_LIST = ['C', 'N', 'O', 'S', 'F', 'Si', 'P', 'Cl', 'Br', 'Mg', 'Na','Ca', 'Fe', 'As', 'Al', 'I', 'B', 'V', 'K', 'Tl', 'Yb','Sb', 'Sn', 
                 'Ag', 'Pd', 'Co', 'Se', 'Ti', 'Zn', 'H','Li', 'Ge', 'Cu', 'Au', 'Ni', 'Cd', 'In', 'Mn', 'Zr','Cr', 'Pt', 'Hg', 'Pb', 'Other']
+
 DEGREE_LIST = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 NUMBER_OF_H_LIST = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 IMPLICIT_VALENCE_LIST = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+ChiralTags = ['CHI_UNSPECIFIED', 'CHI_TETRAHEDRAL_CW', 'CHI_TETRAHEDRAL_CCW', 'CHI_OTHER']
+
 
 BENCHMARK_GROUP = drugcombo_group(path=DATASET_DIR)
 BENCHMARK = BENCHMARK_GROUP.get('Drugcomb_CSS')
@@ -107,6 +111,8 @@ def one_hot_encoding(x, l):
     # Return one-hot encoded list
     return list(map(lambda s: x == s, l))
 
+ChiralTags = ['CHI_UNSPECIFIED', 'CHI_TETRAHEDRAL_CW', 'CHI_TETRAHEDRAL_CCW', 'CHI_OTHER']
+
 def smile_to_graph(smile):
     molecule = Chem.MolFromSmiles(smile)
     atom_features = []
@@ -117,7 +123,7 @@ def smile_to_graph(smile):
         feature = [atom.GetAtomicNum(), atom.GetMass(),atom.GetDegree(),atom.GetTotalNumHs(), atom.GetImplicitValence(),atom.GetExplicitValence(),
                atom.GetFormalCharge(),atom.GetIsAromatic(), atom.GetIsotope(), atom.GetNoImplicit(), atom.GetNumExplicitHs(),atom.GetNumImplicitHs(),
                atom.GetNumRadicalElectrons(),atom.GetTotalDegree(), atom.GetTotalValence(), atom.InvertChirality(), atom.IsInRing()
-               ]
+               ] + one_hot_encoding(atom.GetChiralTag(), ChiralTags)
         # Convert features to integers and append features
         # feature = [int(v) for v in feature]
         feature = [int(round(v)) for v in feature]
@@ -144,12 +150,19 @@ def extract_attributes_from_df(df):
     xtc = df[TARGET_CLASSES].to_numpy()
     return xd1, xd2, xc1, xc2, xc3, xtc, y
 
-rdkit_features =  ['MaxEStateIndex', 'MinEStateIndex', 'MaxAbsEStateIndex', 'MinAbsEStateIndex', 'qed', 'MolWt', 'HeavyAtomMolWt', 'ExactMolWt', 'NumValenceElectrons', 'NumRadicalElectrons', 'FpDensityMorgan1', 'FpDensityMorgan2', 'FpDensityMorgan3', 'Chi0', 'Chi0n', 'Chi0v', 'Chi1', 'Chi1n', 'Chi1v', 'Chi2n', 'Chi2v', 'Chi3n', 'Chi3v', 'Chi4n', 'Chi4v', 'HallKierAlpha', 'Kappa1', 'Kappa2', 'PEOE_VSA14', 'SMR_VSA10', 'SlogP_VSA12', 'EState_VSA11', 'VSA_EState10', 'HeavyAtomCount', 'NHOHCount', 'NOCount', 'NumAliphaticCarbocycles', 'NumAliphaticHeterocycles', 'NumAliphaticRings', 'NumAromaticCarbocycles', 'NumAromaticHeterocycles', 'NumAromaticRings', 'NumSaturatedCarbocycles', 'NumSaturatedHeterocycles', 'NumSaturatedRings', 'fr_Al_COO', 'fr_Al_OH', 'fr_Al_OH_noTert', 'fr_ArN', 'fr_Ar_COO', 'fr_Ar_N', 'fr_Ar_OH', 'fr_COO', 'fr_COO2', 'fr_C_O', 'fr_C_O_noCOO', 'fr_C_S', 'fr_HOCCN', 'fr_Imine', 'fr_NH0', 'fr_NH1', 'fr_NH2', 'fr_N_O', 'fr_Ndealkylation1', 'fr_Ndealkylation2', 'fr_SH', 'fr_aldehyde', 'fr_alkyl_carbamate', 'fr_alkyl_halide', 'fr_allylic_oxid', 'fr_amide', 'fr_amidine', 'fr_aniline', 'fr_aryl_methyl', 'fr_azide', 'fr_azo', 'fr_barbitur', 'fr_benzene', 'fr_benzodiazepine', 'fr_bicyclic', 'fr_diazo', 'fr_dihydropyridine', 'fr_epoxide', 'fr_ester', 'fr_ether', 'fr_furan', 'fr_guanido', 'fr_hdrzine', 'fr_hdrzone', 'fr_imidazole', 'fr_imide', 'fr_isocyan', 'fr_isothiocyan', 'fr_ketone', 'fr_ketone_Topliss', 'fr_lactam', 'fr_lactone', 'fr_methoxy', 'fr_morpholine', 'fr_nitrile', 'fr_nitro', 'fr_nitro_arom', 'fr_nitro_arom_nonortho', 'fr_nitroso', 'fr_oxazole', 'fr_oxime', 'fr_para_hydroxylation', 'fr_phenol', 'fr_phenol_noOrthoHbond', 'fr_phos_acid', 'fr_phos_ester', 'fr_piperdine', 'fr_piperzine', 'fr_priamide', 'fr_prisulfonamd', 'fr_pyridine', 'fr_quatN', 'fr_sulfide', 'fr_sulfonamd', 'fr_sulfone', 'fr_term_acetylene', 'fr_tetrazole', 'fr_thiazole', 'fr_thiocyan', 'fr_thiophene', 'fr_unbrch_alkane', 'fr_urea', 'BalabanJ', 'BertzCT', 'LabuteASA', 'PEOE_VSA1', 'PEOE_VSA2', 'PEOE_VSA3', 'PEOE_VSA4', 'PEOE_VSA5', 'PEOE_VSA6', 'PEOE_VSA7', 'PEOE_VSA8', 'PEOE_VSA9', 'PEOE_VSA10', 'PEOE_VSA11', 'PEOE_VSA12', 'PEOE_VSA13', 'SMR_VSA1', 'SMR_VSA2', 'SMR_VSA3', 'SMR_VSA4', 'SMR_VSA5', 'SMR_VSA6', 'SMR_VSA7', 'SMR_VSA8', 'SMR_VSA9', 'SlogP_VSA1', 'SlogP_VSA2', 'SlogP_VSA3', 'SlogP_VSA4', 'SlogP_VSA5', 'SlogP_VSA6', 'SlogP_VSA7', 'SlogP_VSA8', 'SlogP_VSA9', 'SlogP_VSA10', 'SlogP_VSA11', 'EState_VSA1', 'EState_VSA2', 'EState_VSA3', 'EState_VSA4', 'EState_VSA5', 'EState_VSA6', 'EState_VSA7', 'EState_VSA8', 'EState_VSA9', 'EState_VSA10', 'VSA_EState1', 'VSA_EState2', 'VSA_EState3', 'VSA_EState4', 'VSA_EState5', 'VSA_EState6', 'VSA_EState7', 'VSA_EState8', 'VSA_EState9']
 def _calculate_property_rdkit(smiles, property_name):
     molecule = Chem.MolFromSmiles(smiles)
+    if molecule is None:
+        print(f"Error: Invalid SMILES '{smiles}'.")
+        return None
     try:
         property_value = getattr(Descriptors, property_name)(molecule)
-        return property_value
+        # Ensure the property value is numerical
+        if isinstance(property_value, (int, float)):
+            return property_value
+        else:
+            print(f"Warning: Property '{property_name}' did not return a numerical value.")
+            return None
     except AttributeError:
         print(f"Error: Descriptor '{property_name}' does not exist.")
         return None
@@ -157,9 +170,9 @@ def _calculate_property_rdkit(smiles, property_name):
 def calculate_rdkit_features(smiles, properties):
     return [_calculate_property_rdkit(smiles, prop) for prop in properties]
 
-def calculate_mordred_features(smile_string):
+def calculate_mordred_features(smile_string, ignore_3D):
     # Get mordred features
-    calc = Calculator(descriptors, ignore_3D=True)
+    calc = Calculator(descriptors, ignore_3D=ignore_3D)
     
     # Convert smile to molecule
     molecule = Chem.MolFromSmiles(smile_string)
@@ -171,14 +184,34 @@ def calculate_mordred_features(smile_string):
     # fill 0 to None
     values_list = []
     for value in descriptor_values.values():
-        if isinstance(value, (int, float, np.number)) and not np.isnan(value):
-            values_list.append(value)
-        else:
-            values_list.append(0) 
+        # if isinstance(value, (int, float, np.number)) and not np.isnan(value):
+        values_list.append(value)
+        # else:
+        #     values_list.append(0) 
     return values_list
 
-def get_smile_features(smile):
-    return calculate_rdkit_features(smile, rdkit_features) + calculate_mordred_features(smile)
+def clean_features(smile_to_smile_feature_dict, threshold = 0.8): 
+    # Remove columns whose value are mostly missing   
+    
+    # Convert dict to dataframe and drop missing columns 
+    df = pd.DataFrame(smile_to_smile_feature_dict.values(), index=smile_to_smile_feature_dict.keys())
+    non_numerical_counts_original = df.apply(lambda col: col.map(lambda x: not pd.api.types.is_numeric_dtype(type(x)))).sum()
+    columns_to_drop_original = non_numerical_counts_original[non_numerical_counts_original / df.shape[0] > threshold].index
+    df_cleaned = df.drop(columns=columns_to_drop_original)
+
+    # fillin mean value to the rest missing value
+    for col in df_cleaned.columns:
+        df_cleaned[col] = pd.to_numeric(df[col], errors='coerce')
+        if df_cleaned[col].isnull().any():
+            df_cleaned[col].fillna(df_cleaned[col].mean(), inplace=True)
+    
+    # Return to dict
+    new_dict = df_cleaned.to_dict(orient='index')
+    new_dict = {key: list(value.values()) for key, value in new_dict.items()}
+    return new_dict
+
+def get_smile_features(smile, ignore_3D):
+    return calculate_rdkit_features(smile, rdkit_features) + calculate_mordred_features(smile, ignore_3D=ignore_3D)
 
 # Add graph to the dataframe
 def add_graph(data, smile_to_graph_dict, smile_to_smile_feature_dict):
@@ -205,7 +238,7 @@ def add_graph(data, smile_to_graph_dict, smile_to_smile_feature_dict):
     data['Drug1_Mol_Feature'], data['Drug2_Mol_Feature'] = smile_feature_list1, smile_feature_list2
 
     
-def prepare_dataframe(val_split):
+def prepare_dataframe(val_split, ignore_3D):
     # Gather data from TDC Benchmark
     train_val_df, test_df = BENCHMARK['train_val'], BENCHMARK['test']
     
@@ -222,7 +255,8 @@ def prepare_dataframe(val_split):
                                           test_df['Drug2'].unique())))
     for drug in all_drugs:
         smile_to_graph_dict[drug] = smile_to_graph(drug)
-        smile_to_smile_feature_dict[drug] = get_smile_features(drug)
+        smile_to_smile_feature_dict[drug] = get_smile_features(drug, ignore_3D = ignore_3D)
+    smile_to_smile_feature_dict = clean_features(smile_to_smile_feature_dict)
     
     # Add graph train, val, and test
     add_graph(train_val_df, smile_to_graph_dict, smile_to_smile_feature_dict)
@@ -280,9 +314,9 @@ def custom_collate(batch):
                                 batch_d1=batch_d1, batch_d2=batch_d2, xc1=xc1, xc2=xc2, xc3=xc3,
                                 xtc=xtc, labels=labels, smile_graph=smile_graph, saliency_map=saliency_map)
 
-def get_data_loaders(val_split=0.2, batch_size=32):
+def get_data_loaders(val_split=0.2, batch_size=32, ignore_3D = True):
     # Prepare dataframe
-    train_df, val_df, test_df, smile_to_graph_dict, smile_to_smile_feature_dict = prepare_dataframe(val_split)
+    train_df, val_df, test_df, smile_to_graph_dict, smile_to_smile_feature_dict = prepare_dataframe(val_split, ignore_3D=ignore_3D)
 
     xd1, xd2, xc1, xc2, xc3, xtc, y = extract_attributes_from_df(train_df)
     train_dataset = DrugCSSDataset(xd1=xd1, xd2=xd2, xc1=xc1, xc2=xc2, xc3=xc3, xtc=xtc, y=y, smile_graph=smile_to_graph_dict, smile_feature = smile_to_smile_feature_dict)
@@ -297,6 +331,7 @@ def get_data_loaders(val_split=0.2, batch_size=32):
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
     return train_loader, val_loader, test_loader
+
 # def evaluate_benchmark(predictions):
 #     out = BENCHMARK_GROUP.evaluate(predictions)
 #     logging.info(out)
